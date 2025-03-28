@@ -7,8 +7,8 @@ function App() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [inputs, setInputs] = useState([""]);
-  const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Kiểm tra token và role khi tải trang
   useEffect(() => {
@@ -39,12 +39,10 @@ function App() {
 
       const data = await res.json();
 
-      // Lấy dữ liệu user và token từ JSON trả về
-      const userData = data.data?.tokenResponse?.user; // Lấy thông tin user
-      const role = userData?.role || "user"; // Lấy role chính xác
-      const token = data.data?.tokenResponse?.accessToken; // Lấy token đúng
+      const userData = data.data?.tokenResponse?.user;
+      const role = userData?.role || "user";
+      const token = data.data?.tokenResponse?.accessToken;
 
-      // Lưu token và role vào localStorage
       if (token) localStorage.setItem("token", token);
       localStorage.setItem("role", role);
 
@@ -63,7 +61,7 @@ function App() {
     setLoggedIn(false);
     setRole("");
     setInputs([""]);
-    setResult(null);
+    setSuccessMessage("");
   };
 
   // Cập nhật giá trị của input
@@ -95,15 +93,30 @@ function App() {
 
       if (!res.ok) throw new Error("Gửi dữ liệu lỗi");
 
-      const data = await res.json();
-      setResult(data);
+      await res.json(); // Không cần lưu kết quả
+
+      setSuccessMessage("✅ Gửi dữ liệu thành công!");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
-      setResult({ error: "Không thể gửi dữ liệu" });
+      setSuccessMessage("❌ Gửi dữ liệu thất bại");
+      setTimeout(() => setSuccessMessage(""), 3000);
     }
   };
 
   return (
     <div className="container mt-5">
+
+      {/* ALERT THÀNH CÔNG HIỂN THỊ TRÊN CÙNG */}
+      {successMessage && (
+        <div
+          className="alert alert-success shadow position-fixed top-0 start-50 translate-middle-x mt-3 z-3"
+          style={{ width: "fit-content", maxWidth: "90%" }}
+          role="alert"
+        >
+          {successMessage}
+        </div>
+      )}
+
       {!loggedIn ? (
         // Giao diện đăng nhập
         <div className="card shadow p-4 mx-auto" style={{ maxWidth: 500 }}>
@@ -164,13 +177,6 @@ function App() {
               </button>
             </div>
           </form>
-
-          {result && (
-            <div className="alert alert-info mt-4">
-              <h6>Kết quả từ API:</h6>
-              <pre className="mb-0">{JSON.stringify(result, null, 2)}</pre>
-            </div>
-          )}
         </div>
       ) : (
         // Nếu user không phải admin
