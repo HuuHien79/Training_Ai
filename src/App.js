@@ -18,14 +18,29 @@ function App() {
       setLoggedIn(true);
       setRole(userRole);
     }
-    fetchTags();
+    fetchAllTags();
   }, []);
 
-  const fetchTags = async () => {
+  const fetchAllTags = async () => {
     try {
-      const res = await fetch("https://chatfpt.azurewebsites.net/api/tags?index=1&pageSize=10");
-      const data = await res.json();
-      setTags(data.data.items);
+      let allTags = [];
+      let pageIndex = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const res = await fetch(`https://chatfpt.azurewebsites.net/api/tags?index=${pageIndex}&pageSize=10`);
+        const data = await res.json();
+
+        allTags = [...allTags, ...data.data.items];
+
+        if (data.data.items.length < 10) {
+          hasMore = false; // Dừng lại nếu số tag ít hơn pageSize (10)
+        } else {
+          pageIndex++;
+        }
+      }
+
+      setTags(allTags);
     } catch (err) {
       console.error("Lỗi khi lấy danh sách tag:", err);
     }
@@ -149,7 +164,6 @@ function App() {
         </div>
       ) : role === "Admin" ? (
         <div className="card shadow-lg p-4 position-relative">
-          {/* Nút đăng xuất được đặt trên góc phải */}
           <div className="d-flex justify-content-end">
             <button className="btn btn-danger btn-sm" onClick={handleLogout}>🚪 Đăng xuất</button>
           </div>
