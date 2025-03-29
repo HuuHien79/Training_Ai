@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from "react";
-import "./App.css";  // Import CSS nếu có tùy chỉnh
+import "./App.css";
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [role, setRole] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [inputs, setInputs] = useState([""]);
+  const [inputs, setInputs] = useState([{ document: "", tagId: [] }]);
+  const [tags, setTags] = useState([]);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Kiểm tra trạng thái đăng nhập
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userRole = localStorage.getItem("role");
@@ -18,9 +18,19 @@ function App() {
       setLoggedIn(true);
       setRole(userRole);
     }
+    fetchTags();
   }, []);
 
-  // Xử lý đăng nhập
+  const fetchTags = async () => {
+    try {
+      const res = await fetch("https://chatfpt.azurewebsites.net/api/tags?index=1&pageSize=10");
+      const data = await res.json();
+      setTags(data.data.items);
+    } catch (err) {
+      console.error("Lỗi khi lấy danh sách tag:", err);
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -48,32 +58,49 @@ function App() {
     }
   };
 
-  // Xử lý đăng xuất
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     setLoggedIn(false);
     setRole("");
-    setInputs([""]);
+    setInputs([{ document: "", tagId: [] }]);
     setSuccessMessage("");
   };
 
-  // Cập nhật giá trị input
-  const handleChange = (index, value) => {
-    const newInputs = [...inputs];
-    newInputs[index] = value;
-    setInputs(newInputs);
+  const handleChange = (index, field, value) => {
+    setInputs((prev) => {
+      const newInputs = [...prev];
+      newInputs[index] = { ...newInputs[index], [field]: value };
+      return newInputs;
+    });
   };
 
-  // Thêm input mới
+  const handleTagChange = (index, tagId) => {
+    setInputs((prevInputs) => {
+      return prevInputs.map((input, i) => {
+        if (i === index) {
+          const isSelected = input.tagId.includes(tagId);
+          return {
+            ...input,
+            tagId: isSelected
+              ? input.tagId.filter((id) => id !== tagId)
+              : [...input.tagId, tagId],
+          };
+        }
+        return input;
+      });
+    });
+  };
+
   const handleAddInput = () => {
-    setInputs([...inputs, ""]);
+    setInputs([...inputs, { document: "", tagId: [] }]);
   };
 
-  // Gửi dữ liệu training
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
+
+    console.log("Dữ liệu gửi đi:", inputs);
 
     try {
       const res = await fetch("https://chatfpt.azurewebsites.net/api/ai/training", {
@@ -89,6 +116,7 @@ function App() {
 
       await res.json();
       setSuccessMessage("✅ Gửi dữ liệu thành công!");
+      setInputs([{ document: "", tagId: [] }]);
     } catch {
       setSuccessMessage("❌ Gửi dữ liệu thất bại!");
     }
@@ -96,96 +124,60 @@ function App() {
     setTimeout(() => setSuccessMessage(""), 3000);
   };
 
+  const getTagName = (tagId) => {
+    const tag = tags.find((tag) => tag.id === tagId);
+    return tag ? tag.name : "Không xác định";
+  };
+
   return (
     <div className="container mt-5">
-      {/* Thông báo thành công */}
       {successMessage && (
         <div className="alert alert-success shadow position-fixed top-0 start-50 translate-middle-x mt-3 fade show">
           {successMessage}
         </div>
       )}
 
-      {/* Nếu chưa đăng nhập */}
       {!loggedIn ? (
         <div className="card shadow-lg p-4 mx-auto text-center" style={{ maxWidth: 400 }}>
           <h3 className="mb-3 text-primary">🔑 Đăng nhập Admin</h3>
           <form onSubmit={handleLogin}>
-            <div className="mb-3">
-              <input
-                type="text"
-                className="form-control form-control-lg"
-                placeholder="Tài khoản"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
-            <div className="mb-3">
-              <input
-                type="password"
-                className="form-control form-control-lg"
-                placeholder="Mật khẩu"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+            <input type="text" className="form-control mb-2" placeholder="Tài khoản" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <input type="password" className="form-control mb-2" placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} />
             {error && <div className="alert alert-danger">{error}</div>}
-            <button type="submit" className="btn btn-primary btn-lg w-100">
-              Đăng nhập
-            </button>
+            <button type="submit" className="btn btn-primary w-100">Đăng nhập</button>
           </form>
         </div>
       ) : role === "Admin" ? (
-        // Giao diện Admin
-        <div className="card shadow-lg p-4">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h4 className="text-success">📊 Gửi Dữ liệu Training</h4>
-            <button className="btn btn-danger btn-sm" onClick={handleLogout}>
-              🚪 Đăng xuất
-            </button>
+        <div className="card shadow-lg p-4 position-relative">
+          {/* Nút đăng xuất được đặt trên góc phải */}
+          <div className="d-flex justify-content-end">
+            <button className="btn btn-danger btn-sm" onClick={handleLogout}>🚪 Đăng xuất</button>
           </div>
+
+          <h4 className="text-success text-center">📊 Gửi Dữ liệu Training</h4>
           <form onSubmit={handleSubmit}>
             {inputs.map((input, idx) => (
               <div className="mb-3" key={idx}>
                 <label className="form-label">Dòng {idx + 1}</label>
-                <input
-                  type="text"
-                  className="form-control form-control-lg"
-                  value={input}
-                  onChange={(e) => handleChange(idx, e.target.value)}
-                  required
-                />
+                <input type="text" className="form-control mb-2" placeholder="Nhập dữ liệu" value={input.document} onChange={(e) => handleChange(idx, "document", e.target.value)} required />
+
+                <label className="form-label">Chọn Tag:</label>
+                <div className="d-flex flex-wrap">
+                  {tags.map((tag) => (
+                    <button key={tag.id} type="button" className={`btn me-2 mb-2 ${input.tagId.includes(tag.id) ? "btn-success" : "btn-outline-secondary"}`} onClick={() => handleTagChange(idx, tag.id)}>
+                      {tag.name}
+                    </button>
+                  ))}
+                </div>
+
+                {input.tagId.length > 0 && <p><strong>Tag đã chọn:</strong> {input.tagId.map(getTagName).join(", ")}</p>}
               </div>
             ))}
-            <div className="d-flex gap-2">
-              <button type="button" className="btn btn-outline-secondary" onClick={handleAddInput}>
-                ➕ Thêm dòng
-              </button>
-              <button type="submit" className="btn btn-success">
-                📩 Gửi dữ liệu
-              </button>
-            </div>
+            <button type="button" className="btn btn-outline-secondary" onClick={handleAddInput}>➕ Thêm dòng</button>
+            <button type="submit" className="btn btn-success">📩 Gửi dữ liệu</button>
           </form>
         </div>
-      ) : (
-        // Giao diện khi không có quyền
-        <>
-          <div className="card text-center shadow-lg p-4 border-0" style={{ backgroundColor: "#fff3cd", borderRadius: "10px" }}>
-            <h4 className="text-dark fw-bold">
-              ⚠️ Truy cập bị hạn chế!
-            </h4>
-            <p className="text-muted">
-              Bạn không có quyền sử dụng chức năng này. Vui lòng đăng nhập với tài khoản Admin.
-            </p>
-          </div>
-
-          {/* Nút đăng xuất bên ngoài, căn giữa */}
-          <div className="text-center mt-3">
-            <button className="btn btn-danger px-3 py-1 fw-bold shadow-sm" onClick={handleLogout}>
-              🚪 Đăng xuất
-            </button>
-          </div>
-        </>
-      )}
+      ) : <p>⚠️ Bạn không có quyền truy cập!</p>}
     </div>
   );
 }
