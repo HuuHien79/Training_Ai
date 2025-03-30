@@ -168,7 +168,7 @@ function App() {
             <button className="btn btn-danger btn-sm" onClick={handleLogout}>🚪 Đăng xuất</button>
           </div>
 
-          <h4 className="text-success text-center">📊 Gửi Dữ liệu Training</h4>
+          <h4 className="text-success text-center">📊 Gửi Dữ liệu Training AI</h4>
           <form onSubmit={handleSubmit}>
             {inputs.map((input, idx) => (
               <div className="mb-3" key={idx}>
@@ -188,10 +188,15 @@ function App() {
               </div>
             ))}
             <button type="button" className="btn btn-outline-secondary" onClick={handleAddInput}>➕ Thêm dòng</button>
-            <button type="submit" className="btn btn-success">📩 Gửi dữ liệu</button>
+            <button type="submit" className="btn-submit btn btn-success">📩 Gửi dữ liệu</button>
           </form>
         </div>
-      ) : <p>⚠️ Bạn không có quyền truy cập!</p>}
+      ) : (
+        <div className="card shadow-lg p-4 mx-auto text-center" style={{ maxWidth: 400 }}>
+          <p>⚠️ Bạn không có quyền truy cập!</p>
+          <button className="btn btn-danger" onClick={handleLogout}>🚪 Đăng xuất</button>
+        </div>
+      )}
     </div>
   );
 }
